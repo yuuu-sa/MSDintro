@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>病友交流區</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            text-align: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-box {
+            width: 100%;
+            height: 400px;
+            overflow-y: auto;
+            border-radius: 15px;
+            padding: 10px;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin: 10px;
+            padding: 12px;
+            max-width: 75%;
+            border-radius: 20px;
+            display: inline-block;
+            word-wrap: break-word;
+        }
+        .message.sent {
+            background: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+        .message.received {
+            background: #e4e6eb;
+            color: black;
+            align-self: flex-start;
+        }
+        .input-box {
+            display: flex;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .input-box input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+        .input-box button {
+            margin-left: 10px;
+            padding: 12px 20px;
+            border-radius: 20px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .input-box button:hover {
+            background: #0056b3;
+        }
+        .highlight {
+            background-color: #F3C262 !important;
+            transition: background-color 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chatContainer" class="container chat-container">
+        <h2 id="roomTitle"></h2>
+        <div class="chat-controls">
+            <button onclick="scrollToMessage(1)" style="margin: 10px; padding: 10px; border-radius: 5px; border: none; background: #A2C5C9; color: black; cursor: pointer;">
+                跳到考慮試試看
+            </button>
+            <button onclick="scrollToMessage(2)" style="margin: 10px; padding: 10px; border-radius: 5px; border: none; background: #F1E0CE; color: black; cursor: pointer;">
+                跳到詳細聊聊
+            </button>
+        </div>
+            <div class="chat-box" id="chatBox"></div>
+            <div class="input-box">
+                <input type="text" id="messageInput" placeholder="輸入訊息...">
+                <button onclick="sendMessage()">發送</button>
+            </div>
+            <button onclick="goBack()">返回</button>
+        </div> 
+    
+ 
+    <script>
+        // let currentRoom = "";
+        function getRoomFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("room") || "room1"; // 正確方式，從 URL 取得 room 參數
+        }
+
+
+        let chatData = {
+            room1: [
+        { text: "大家好，這裡是頭頸部癌友的交流區，歡迎分享你的經驗。", type: "received" },
+        { text: "我的第一次療法是放療，剛開始的副作用不明顯，但幾週後開始出現口乾和吞嚥困難。", type: "received" },
+        { text: "最近感覺怎麼樣？聽說你開始做免疫療法了，效果如何？", type: "received" },
+        { text: "還可以，剛開始有點累，身體適應了一陣子，不過比起化療的副作用，我覺得免疫療法還是比較溫和的。", type: "received" },
+        { text: "真的嗎？我之前做化療的時候，噁心、掉髮，嘴巴還破到沒辦法吃東西，超痛苦……", type: "received" },
+        { text: "對，我也有這些問題，特別是嘴巴潰瘍，喝水都痛。免疫療法雖然也有副作用，但不太一樣，我主要是皮膚紅疹、疲勞，還有點關節痠痛。不過醫生有幫我控制，還算能忍受。", type: "received" },
+        { text: "那治療效果呢？醫生說有幫助嗎？", type: "received" },
+        { text: "目前剛做幾個療程，腫瘤有縮小一點，醫生說要再觀察。頭頸癌有時候對免疫療法的反應沒那麼快，但如果有效，身體自己會慢慢對抗癌細胞。", type: "received" },
+        { text: "聽起來不錯，我本來很猶豫要不要試，畢竟免疫療法不是對每個人都有效……", type: "received" },
+        { text: "對，醫生說要看 PD-L1 表達情況，還有其他檢查結果。有些人效果很好，但也有些人沒太大變化。你可以問醫生，看你的情況適不適合。", type: "received" },
+        { text: "嗯，我會再問問看。說真的，頭頸癌真的很折磨人，吃東西、說話都不方便，真的希望有更好的治療方式……", type: "received" },
+        { text: "對啊，但至少現在有免疫療法可以試試看，多一種希望總是好的！我們一起加油！", type: "received" },
+        { text: "嗯！謝謝你分享，聽你這樣說，我比較有信心了！", type: "received" }
+    ],
+    room2: [
+        { text: "這裡是胸腔癌友的專區，希望彼此能夠互相支持。", type: "received" },
+        { text: "病友 A：你最近怎麼樣?之前聽說你開始做免疫療法了，感覺如何？", type: "received" },
+        { text: "病友 B：嗯，剛開始的時候有點擔心，畢竟這跟化療不一樣，不過目前還行，副作用沒有想像中嚴重。", type: "received" },
+        { text: "病友 A：真的嗎？我一直在考慮要不要試試看，醫生有跟我提過，但我怕副作用太大。", type: "received" },
+        { text: "病友 B：其實副作用每個人不一樣，我一開始只是有點發燒、疲勞，然後皮膚有點紅疹，後來身體慢慢適應了。比起化療的噁心、嘔吐，我覺得這些副作用還可以忍受。", type: "received" },
+        { text: "病友 A：聽起來還不錯，那效果呢？有沒有感覺比較好？", type: "received" },
+        { text: "病友 B：我才做了幾個療程，醫生說還要再觀察，不過前幾次檢查結果有點改善，算是個好兆頭。我們的免疫系統本來就會攻擊異常細胞，免疫療法的作用就是讓它更有效地識別和對抗癌細胞。", type: "received" },
+        { text: "病友 A：感覺是個不錯的選擇，我之前做化療真的太痛苦了……如果免疫療法有效，我也想試試看。", type: "received" },
+        { text: "病友 B：對啊，你可以跟醫生再詳細聊聊，看看你的癌症類型適不適合。有些人對免疫療法的反應很好，但也有些人可能沒那麼明顯，還是要評估一下。", type: "received" },
+        { text: "病友 A：嗯，我會問問醫生的。聽你這樣說，我放心不少，至少知道有人試過沒問題。", type: "received" },
+        { text: "病友 B：沒錯！我們一起加油吧！治療過程真的不容易，但多一種選擇就多一份希望。", type: "received" }
+    ],
+    room3: [
+    { text: "最近還好嗎？聽說你開始做免疫療法了，感覺怎麼樣？", type: "received" },
+    { text: "嗯，剛開始有點不適應，主要是疲勞和輕微的發燒，不過比起化療的副作用，我覺得還算可以接受。", type: "received" },
+    { text: "我最近也在考慮免疫療法，因為化療讓我腸胃變得很差，吃東西就吐，體重掉了好多……", type: "received" },
+    { text: "對，我也是，之前做化療的時候，腸胃超不舒服，噁心、腹瀉、沒胃口，真的很痛苦。免疫療法比較不會直接攻擊腸胃細胞，但它會影響免疫系統，有時候可能會讓腸道發炎。", type: "received" },
+    { text: "那你有腸胃不適的副作用嗎？", type: "received" },
+    { text: "一開始還好，但後來有點拉肚子，醫生說是免疫系統在作用，還好有給我藥物控制。相比化療，我覺得免疫療法對腸胃的影響沒那麼劇烈。", type: "received" },
+    { text: "那效果呢？你的腫瘤有縮小嗎？", type: "received" },
+    { text: "目前還在治療中，不過醫生說腫瘤有稍微縮小一點，血液指標也有改善。免疫療法的效果不像化療那麼快，可能要幾個月才能看到明顯變化，但如果有效，免疫系統可以持續對抗癌細胞。", type: "received" },
+    { text: "聽起來不錯，我的癌細胞主要在肝臟，醫生說免疫療法可能對肝癌有效，但不是每個人都有反應……", type: "received" },
+    { text: "對，我的癌症也是腹腔內的，醫生有做 PD-L1 和微衛星不穩定性（MSI）的檢測，確定我的體質適合才讓我試免疫療法。你可以問問醫生，看你的情況適不適合。", type: "received" },
+    { text: "嗯，我會問清楚的。其實治療過程真的很難熬，但如果免疫療法有效，至少能減少化療的次數就好了……", type: "received" },
+    { text: "對啊，不管怎樣，至少現在有更多選擇，不像以前只有化療和放療。我們一定要撐下去，加油！", type: "received" },
+    { text: "謝謝你跟我分享這些，讓我更有信心了！我們一起加油！", type: "received" }
+    ],
+    room4 : [
+    { text: "我最近開始免疫療法，但醫生說我的癌細胞已經轉移到骨骼，真的很擔心……", type: "received" },
+    { text: "我懂你的感受，我的癌症也是骨轉移。剛開始很害怕，但後來發現，免疫療法有些病人效果不錯，而且現在還有標靶藥物或雙磷酸鹽類的藥可以幫助減少骨骼破壞。", type: "received" },
+    { text: "我現在最怕的是骨頭痛，尤其是晚上，疼得睡不著……", type: "received" },
+    { text: "我之前也是，骨轉移的疼痛很折磨人。可以跟醫生討論止痛藥，像是輕微時用普拿疼，嚴重時可能需要類鴉片止痛藥。還有，一些放射治療也能幫助緩解局部疼痛。", type: "received" },
+    { text: "原來還有這些方法，我本來怕吃止痛藥會對身體不好，想忍一忍……", type: "received" },
+    { text: "千萬不要忍，醫生說控制疼痛很重要，這樣我們才能保持體力繼續治療。而且長期疼痛還會影響心情和免疫系統，反而不利於治療效果。", type: "received" },
+    { text: "你說得對，我最近走路也覺得比較吃力，有時候還會有點骨折的感覺，這是不是骨頭變脆了？", type: "received" },
+    { text: "有可能，骨轉移會讓骨質變弱，容易骨折。所以千萬要小心，不要提重物，也可以問醫生看需不需要補充鈣質或維生素D，還有一些骨針可以幫助減緩骨質流失。", type: "received" },
+    { text: "感覺這些事情真的要好好注意……謝謝你分享這麼多經驗，我本來一直很絕望，現在覺得還是有方法可以試試。", type: "received" },
+    { text: "我們都在努力對抗這場病，雖然骨轉移讓人害怕，但現在的治療比以前進步很多。記得有問題一定要問醫生，不要自己悶著！", type: "received" },
+    { text: "真的，聽你這樣說，我比較有信心了！我們一起加油！", type: "received" },
+    { text: "對，一起加油！有困難也可以隨時聊聊，我們不是一個人在戰鬥！", type: "received" }
+],
+
+    room5: [
+    { text: "最近怎麼樣？聽說你開始做免疫療法了，感覺如何？", type: "received" },
+    { text: "目前還可以，剛開始有點疲勞，皮膚也有點乾癢，不過比起傳統化療，我覺得這些副作用還算輕微。", type: "received" },
+    { text: "乾癢？這是因為免疫療法嗎？", type: "received" },
+    { text: "對，醫生說免疫療法會讓免疫系統變得更活躍，有時候會攻擊正常皮膚細胞，導致乾燥、紅疹，甚至脫皮。不過我有擦藥膏和保濕，現在好多了。", type: "received" },
+    { text: "聽起來比化療好，我之前做化療的時候，皮膚變超薄，還長滿黑斑，真的很難受……", type: "received" },
+    { text: "我也是，化療讓皮膚變得很脆弱，還容易感染。免疫療法雖然也會影響皮膚，但感覺沒那麼嚴重，醫生有幫我控制，還算可以忍受。", type: "received" },
+    { text: "那治療效果呢？你的腫瘤有變小嗎？", type: "received" },
+    { text: "目前剛做幾個療程，醫生說腫瘤有縮小一些，而且沒有新的病灶出現。免疫療法不像化療那麼快見效，但如果有效，免疫系統就會持續攻擊癌細胞，可能會有更長期的效果。", type: "received" },
+    { text: "聽起來不錯，我的癌細胞已經擴散了，醫生建議我試免疫療法，但我還是有點擔心……", type: "received" },
+    { text: "如果是像黑色素瘤或某些皮膚癌，免疫療法的效果其實不錯，尤其是如果 PD-L1 表達高，或有 BRAF 突變的話，醫生可能會搭配標靶治療一起用。你可以問醫生，看你的癌症類型適不適合。", type: "received" },
+    { text: "嗯，我會再問問醫生。其實聽你這麼說，我覺得希望更大了，至少這不像化療那麼傷身體。", type: "received" },
+    { text: "對啊，至少現在有更多選擇，不像以前只有化療或放療。我們一定要堅持下去，加油！", type: "received" },
+    { text: "謝謝你跟我分享這些，讓我更有信心了！我們一起努力！", type: "received" }
+],
+    room6: [
+    { text: "最近怎麼樣？聽說你開始做免疫療法了，效果如何？", type: "received" },
+    { text: "還行，剛開始有點疲勞，免疫療法的副作用比化療少一些，但有時候還是會感覺身體不太對勁，像是關節痠痛、皮膚紅疹這類的問題。", type: "received" },
+    { text: "聽起來比化療好一些……我之前做化療的時候，整個人超累，白血球降很低，還一直感染，真的很痛苦。", type: "received" },
+    { text: "對，化療會把免疫系統壓下去，很容易生病。我做免疫療法之後雖然還是會累，但比較不會像化療那樣完全沒抵抗力。不過，醫生有提醒我，免疫療法可能會影響內分泌系統，像是甲狀腺功能異常，甚至有些人會影響生殖激素。", type: "received" },
+    { text: "真的嗎？我還在考慮要不要試，因為醫生說免疫療法對某些類型的生殖系統癌有效，但不是每個人都有反應……", type: "received" },
+    { text: "對，像是子宮頸癌、卵巢癌、攝護腺癌、睪丸癌這些，有些人對免疫療法反應很好，特別是如果 PD-L1 指數高，或有特定的基因突變，治療效果可能會比較明顯。你可以問醫生，看你的癌症類型適不適合。", type: "received" },
+    { text: "我的癌症已經有擴散跡象了，醫生說可以考慮免疫療法搭配其他治療試試看，但我還是有點猶豫……", type: "received" },
+    { text: "如果是比較晚期或復發的情況，免疫療法可能是一個不錯的選擇，因為它不是直接攻擊癌細胞，而是讓免疫系統自己去對抗。雖然效果比較慢，但如果有效，可能會有長期的控制效果。", type: "received" },
+    { text: "那你有沒有什麼特別的副作用？", type: "received" },
+    { text: "除了疲勞、皮膚問題，我還有點腹瀉，醫生說可能是免疫系統影響了腸胃。另外，免疫療法可能會影響荷爾蒙分泌，所以要定期檢查內分泌指數。不過，這些副作用大多可以控制，不像化療那麼劇烈。", type: "received" },
+    { text: "聽你這樣說，我比較放心了。我真的不想再經歷化療那種折磨，希望免疫療法能帶來一些好結果……", type: "received" },
+    { text: "對啊，至少現在治療方式比以前多了，我們有更多選擇，這已經是很大的進步了！一起加油吧！", type: "received" },
+    { text: "嗯！謝謝你分享經驗，我會再跟醫生討論看看！", type: "received" }
+],
+     room7 :[
+    { text: "最近怎麼樣？聽說你開始做免疫療法了，效果如何？", type: "received" },
+    { text: "還可以，剛開始有點疲勞，免疫療法不像化療那麼強烈，但還是會影響身體，有時候會有輕微發燒或關節痠痛。", type: "received" },
+    { text: "我還在考慮要不要試，因為之前化療讓我白血球降得超低，感染好多次，身體變得很虛弱……", type: "received" },
+    { text: "對，我也是，化療讓免疫力變得很差，甚至需要輸血或打生長因子來增加白血球。免疫療法的方式不太一樣，它是幫助免疫系統攻擊癌細胞，不會像化療那樣直接摧毀正常的血球細胞。", type: "received" },
+    { text: "那你的血液指數有改善嗎？", type: "received" },
+    { text: "目前還在觀察，但醫生說我的腫瘤指數下降了一點，淋巴結的腫大也有稍微減少。免疫療法不像化療會馬上見效，它需要時間來刺激免疫系統，所以要耐心等一陣子。", type: "received" },
+    { text: "聽起來不錯，我的癌細胞主要在淋巴系統，醫生說像是霍奇金淋巴瘤、某些非霍奇金淋巴瘤，免疫療法可能有效，但白血病的話效果就比較不一定……", type: "received" },
+    { text: "對，像是有 PD-L1 高表達的淋巴癌，或是有特定基因變異的血癌，免疫療法可能會有很好的效果。我做療程之前，醫生也幫我做了基因檢測，確定我的癌細胞可能對免疫療法有反應才讓我試。", type: "received" },
+    { text: "那副作用呢？你有什麼特別的不舒服嗎？", type: "received" },
+    { text: "主要是疲勞、關節痠痛，還有一點點皮疹。另外，免疫療法可能影響造血系統，有些人會出現貧血或血小板降低，所以醫生會定期幫我抽血檢查。不過比起化療那種嚴重的骨髓抑制，我覺得免疫療法的副作用還是比較溫和的。", type: "received" },
+    { text: "那你會推薦我試試看嗎？", type: "received" },
+    { text: "如果你的癌症類型適合免疫療法，真的可以考慮試試看，至少比化療溫和一些，長期效果也可能更好。但還是要讓醫生評估你的情況，因為有些人可能會出現免疫系統過度活躍的問題，像是自體免疫反應。", type: "received" },
+    { text: "嗯，我會再問問醫生的，其實聽你這麼說，我覺得希望更大了，不想再經歷化療那種痛苦……", type: "received" },
+    { text: "對啊，至少現在治療選擇比以前多了，不像以前只有化療或放療。我們一定要堅持下去，加油！", type: "received" },
+    { text: "謝謝你的分享，讓我更有信心了！我們一起努力！", type: "received" }
+],
+room8 : [
+    { text: "我最近開始做免疫療法了，聽說效果因人而異，我有點擔心自己會不會沒反應……", type: "received" },
+    { text: "我之前也有這種擔憂，畢竟不像化療那樣馬上看到腫瘤縮小，但醫生說，免疫療法是幫助我們的免疫系統對抗癌細胞，可能需要一點時間才會發揮效果。", type: "received" },
+    { text: "對啊，醫生也說要有耐心。不過，我開始治療後，有時候會發燒，關節也有點痛，這是正常的嗎？", type: "received" },
+    { text: "是的，我也有這些副作用，醫生說這是因為免疫系統被活化了，有點像感冒的感覺。我通常會多喝水、適當休息，必要時再請醫生開藥控制。", type: "received" },
+    { text: "這樣聽起來放心一點了。只是我家人有點不理解，總覺得免疫療法不像化療那麼激烈，應該不會太難受……", type: "received" },
+    { text: "我懂，那種被誤解的感覺不好受。但其實免疫療法的副作用也不輕，有些人甚至會出現免疫系統攻擊正常器官的問題，所以我們的辛苦不是外人能輕易理解的。", type: "received" },
+    { text: "真的，像我最近皮膚變得很乾燥，甚至有點發炎，這應該也是免疫反應吧？", type: "received" },
+    { text: "沒錯，我之前也有類似的情況，醫生建議使用溫和的保濕乳液，避免刺激性產品，還有記得防曬，因為免疫療法可能會讓皮膚更敏感。", type: "received" },
+    { text: "謝謝你分享這些經驗，真的很有幫助。我本來一直擔心免疫療法是不是不夠強，現在覺得或許應該給自己多一點時間。", type: "received" },
+    { text: "是啊，這條路雖然不容易，但我們在努力對抗癌症，已經很了不起了。記住要跟醫生保持聯繫，有任何不適都不要忍著。", type: "received" },
+    { text: "謝謝你，我會的！也希望你的治療能夠順利，大家一起加油！", type: "received" },
+    { text: "一起加油！我們都在這條路上努力前進，不管怎樣，都要相信自己！", type: "received" }
+]
+
+
+};
+
+// function enterRoom(room) {
+//     currentRoom = room;
+//     document.getElementById("roomSelection").style.display = "none";
+//     document.getElementById("chatContainer").style.display = "flex";
+    
+
+//     const roomTitles = [
+//         "頭頸部", // room1
+//         "胸腔",   // room2
+//         "腹腔及內藏",   // room3
+//         "骨骼及軟組織",   // room4
+//         "皮膚",   // room5
+//         "生殖系統",   // room6
+//         "血液淋巴系統", // room7
+//         "全身癌症"   // room8
+//     ];
+
+    function loadChatRoom() {
+            let room = getRoomFromURL();
+
+            let roomTitles = {
+            "room1": "頭頸部聊天室",
+            "room2": "胸腔聊天室",
+            "room3": "腹腔及內臟聊天室",
+            "room4": "骨骼與軟組織聊天室",
+            "room5": "皮膚聊天室",
+            "room6": "生殖系統聊天室",
+            "room7": "血液淋巴系統聊天室",
+            "room8": "全身癌症聊天室"
+        };
+
+                // 設定聊天室標題
+            document.getElementById("roomTitle").innerText = roomTitles[room] || "聊天室";
+
+        // 確保 chatContainer 顯示
+        document.getElementById("chatContainer").style.display = "block";
+
+        let chatBox = document.getElementById("chatBox");
+        chatBox.innerHTML = ""; // 清空舊內容
+
+        if (chatData[room]) {
+            chatData[room].forEach(message => {
+                let msgDiv = document.createElement("div");
+                msgDiv.classList.add("message", message.type);
+                msgDiv.textContent = message.text;
+                chatBox.appendChild(msgDiv);
+            });
+        } else {
+            chatBox.innerHTML = "<p>沒有找到聊天室內容</p>";
+        }
+        }
+
+        
+        window.onload = loadChatRoom;
+
+        function goBack() {
+            window.location.href = "index.html";
+       }
+       
+
+    
+        function sendMessage() {
+            var input = document.getElementById("messageInput");
+            var message = input.value.trim();
+            let room = getRoomFromURL();
+
+            if (message) {
+                chatData[room].push({ text: message, type: "sent" });
+                loadChatRoom();
+                input.value = "";
+            }
+        }
+
+        function receiveMessage() {
+            chatData[currentRoom].push({ text: "這是一個關於癌友交流的地方，可以開始進入聊天室囉！", type: "received" });
+            renderMessages();
+        }
+
+        // function renderMessages() {
+        //     var chatBox = document.getElementById("chatBox");
+        //     chatBox.innerHTML = "";
+        //     chatData[currentRoom].forEach(msg => {
+        //         var messageElement = document.createElement("div");
+        //         messageElement.classList.add("message", msg.type);
+        //         messageElement.textContent = msg.text;
+        //         chatBox.appendChild(messageElement);
+        //     });
+        //     chatBox.scrollTop = chatBox.scrollHeight;
+        // }
+
+    //    
+    // if (roomTitles[room]) {
+    //     document.getElementById("chatRoom").style.display = "block"; // 顯示聊天室
+    //     document.getElementById("room-title").innerText = roomTitles[room];
+    //     loadChatMessages(room);
+    // } else {
+    //     document.getElementById("chatRoom").style.display = "none"; // 隱藏聊天室
+    // }
+
+    </script>
+  <script>
+    function scrollToMessage(index) {
+        let chatBox = document.getElementById("chatBox");
+        let messages = chatBox.getElementsByClassName("message");
+
+        let targetMessage;
+        if (index === 1) {
+            targetMessage = messages[3]; // "真的嗎？我一直在考慮..."
+        } else if (index === 2) {
+            targetMessage = messages[9]; // "對啊，你可以跟醫生再詳細聊聊..."
+        }
+
+        if (targetMessage) {
+            targetMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            document.querySelectorAll(".highlight").forEach(msg => {
+                msg.classList.remove("highlight");
+            });
+
+            targetMessage.classList.add("highlight");
+
+          
+            setTimeout(() => {
+                targetMessage.classList.remove("highlight");
+            }, 1500);
+        }
+    }
+</script>
+
+    
+</body>
+</html>
